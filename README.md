@@ -28,6 +28,14 @@ If it fails to do so, the data is encoded to a hex string before being displayed
 `comet` can also handle two different "sources" (port 1 and 2) and will multiplex them (Note: be aware there is no guaranty on the order). 
 This allows to sniff on both RX and TX simultaneously.
 
+## Getting started
+
+After having cloned this repo and `cd` into it, you can install `comet` by issuing:
+
+```
+$ cargo install --path .
+```
+
 ## Simple usage
 
 In its simplest usage (listening on a port with all default parameters):
