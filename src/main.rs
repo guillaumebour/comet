@@ -29,6 +29,7 @@ struct InputConfig {
 
 struct OutputConfig {
     session_name: String,
+    noout: bool,
     display_timestamp: bool,
     display_direction: bool,
     with_colour: bool,
@@ -90,6 +91,9 @@ fn build_app() -> App<'static> {
                 .long("session-name")
                 .takes_value(true)
                 .help("Name of the capture session"),
+            Arg::new("nout")
+                .long("nout")
+                .help("Do not save captured data to files"),
             Arg::new("list-ports")
                 .long("list-ports")
                 .help("List available TTY ports"),
@@ -132,6 +136,7 @@ fn listen(args: ArgMatches) {
         if args.is_present("baud") {
             let baud_str = args.value_of("baud").unwrap();
             let baud: u32 = baud_str.parse().expect("failed to parse baud rate");
+            let noout = args.is_present("nout");
 
             let session_name = match args.is_present("session-name") {
                 true => String::from(args.value_of("session-name").unwrap()),
@@ -150,7 +155,7 @@ fn listen(args: ArgMatches) {
                 next_idx: Arc::clone(&shared_idx),
             };
 
-            if Path::new(&session_name).exists() {
+            if !noout && Path::new(&session_name).exists() {
                 let answer = Question::new(format!("[!] The capture directory for session name {} already exists, override? (y/n) ", session_name).as_str()).yes_no().confirm();
                 match answer {
                     Answer::RESPONSE(_) => {
@@ -167,9 +172,10 @@ fn listen(args: ArgMatches) {
             }
 
             println!("[*] session: {}", session_name);
-
+            println!("[*] No out: {}", noout);
             let output_config = OutputConfig {
                 session_name,
+                noout,
                 display_timestamp: !args.is_present("no-timestamp"),
                 display_direction: !args.is_present("no-direction"),
                 with_colour: !args.is_present("no-colour"),
@@ -251,12 +257,16 @@ fn receive_on_port(cfg: InputConfig, send_to: Sender<CapturedData>) {
 
 fn handle_message(cfg: OutputConfig, receive_on: Receiver<CapturedData>) {
     let session_path = Path::new(&cfg.session_name);
-    fs::create_dir_all(session_path).unwrap();
+    let mut out_file: Option<File> = None;
+    let out_file_json: Option<File>;
+    let mut json_writer = None;
 
-    let mut out_file = File::create(session_path.join("console_log.txt")).unwrap();
-    let out_file_json = File::create(session_path.join("capture.json")).unwrap();
-
-    let mut json_writer = utils::IncrementalJsonWriter::new(out_file_json);
+    if !cfg.noout {
+        fs::create_dir_all(session_path).unwrap();
+        out_file = Some(File::create(session_path.join("console_log.txt")).unwrap());
+        out_file_json = Some(File::create(session_path.join("capture.json")).unwrap());
+        json_writer = Some(utils::IncrementalJsonWriter::new(out_file_json.unwrap()));
+    }
 
     for msg in receive_on {
         let data_to_display;
@@ -300,17 +310,22 @@ fn handle_message(cfg: OutputConfig, receive_on: Receiver<CapturedData>) {
         ));
         println!("{}", line_to_display.trim());
 
-        match out_file.write_all(&msg.data) {
-            Ok(_) => {}
-            Err(err) => {
-                println!("[ERROR] could not write line to file: {}", err)
-            }
-        };
+        if !cfg.noout {
+            let mut reg_file = out_file.as_ref().unwrap();
+            let json_file = json_writer.as_mut().unwrap();
 
-        match json_writer.write_json(&msg) {
-            Ok(_) => {}
-            Err(err) => {
-                println!("[ERROR] could not write json msg to file: {}", err)
+            match reg_file.write_all(&msg.data) {
+                Ok(_) => {}
+                Err(err) => {
+                    println!("[ERROR] could not write line to file: {}", err)
+                }
+            };
+
+            match json_file.write_json(&msg) {
+                Ok(_) => {}
+                Err(err) => {
+                    println!("[ERROR] could not write json msg to file: {}", err)
+                }
             }
         }
     }
