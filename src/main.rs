@@ -21,6 +21,9 @@ use std::time::Duration;
 use std::{fs, thread};
 use termion::{color, style};
 
+const CAPTURE_FILE: &str = "console_log.txt";
+const CAPTURE_FILE_JSON: &str = "capture.json";
+
 struct InputConfig {
     port: SerialPortBuilder,
     port_id: i32,
@@ -159,7 +162,7 @@ fn listen(args: ArgMatches) {
                 let answer = Question::new(format!("[!] The capture directory for session name {} already exists, override? (y/n) ", session_name).as_str()).yes_no().confirm();
                 match answer {
                     Answer::RESPONSE(_) => {
-                        println!("SHOULD NOT HAPPEN")
+                        panic!("should not happen");
                     }
                     Answer::YES => {
                         fs::remove_dir_all(&session_name).unwrap();
@@ -263,8 +266,8 @@ fn handle_message(cfg: OutputConfig, receive_on: Receiver<CapturedData>) {
 
     if !cfg.noout {
         fs::create_dir_all(session_path).unwrap();
-        out_file = Some(File::create(session_path.join("console_log.txt")).unwrap());
-        out_file_json = Some(File::create(session_path.join("capture.json")).unwrap());
+        out_file = Some(File::create(session_path.join(CAPTURE_FILE)).unwrap());
+        out_file_json = Some(File::create(session_path.join(CAPTURE_FILE_JSON)).unwrap());
         json_writer = Some(utils::IncrementalJsonWriter::new(out_file_json.unwrap()));
     }
 
