@@ -61,6 +61,7 @@ OPTIONS:
         --no-colour                      Do not display colours
         --no-direction                   Do not display message direction information
         --no-timestamp                   Do not display timestamps
+        --nout                           Do not save captured data to files
     -p, --port <port>                    Port 1
         --port2 <port2>                  Port 2
         --session-name <session-name>    Name of the capture session
@@ -101,6 +102,6 @@ $ comet --common-baudrates
 
 ## Contributing
 
-Any contributions to the tool are welcome!
+Any contribution to the tool is welcome!
 
-Writing this tool was also for me a way to try out rust and as such, any contributions to the code quality (to make it more rustacean for instance) are more than welcome!
+Writing this tool was also for me a way to try out rust and as such, any contribution to the code quality (to make it more rustacean for instance) is more than welcome!
